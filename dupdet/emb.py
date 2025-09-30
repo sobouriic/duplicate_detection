@@ -3,33 +3,22 @@ import numpy as np
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from .config import CFG
 
-try:
-    from deep_translator import GoogleTranslator
-except ImportError:
-    GoogleTranslator = None  # optional translation
-
-
-def _l2(v: np.ndarray) -> np.ndarray:
+def _l2(v):
     v = np.asarray(v, dtype=np.float32)
     n = float(np.linalg.norm(v))
     return (v / max(n, 1e-12)).astype(np.float32)
 
-
 def _resolve_instructions(model_name: str):
+    qi = CFG.query_instruction
+    ti = CFG.text_instruction
     m = (model_name or "").lower()
-    qi = CFG.query_instruction or ""
-    ti = CFG.text_instruction or ""
-
-    if "bge" in m:
-        return "query: ", "passage: "
 
     if "e5" in m:
-        qi = qi or "query: "
-        ti = ti or "query: "
-        return qi, ti
-
+        if not qi:
+            qi = "query: "
+        if not ti:
+            ti = "query: "
     return qi, ti
-
 
 @lru_cache(maxsize=1)
 def _get_embedder() -> HuggingFaceEmbedding:
@@ -43,7 +32,7 @@ def _get_embedder() -> HuggingFaceEmbedding:
             device=CFG.device,
         )
     except Exception as e:
-        print("[dupdet] Warning: could not load", model_name, "->", e)
+        print("[dupdet] Warning: could not load primary model:", model_name, "->", e)
         fallback = "intfloat/multilingual-e5-base"
         print("[dupdet] Falling back to", fallback)
         qi, ti = _resolve_instructions(fallback)
@@ -54,35 +43,27 @@ def _get_embedder() -> HuggingFaceEmbedding:
             device=CFG.device,
         )
 
-
-def _maybe_translate(text: str) -> str:
-    if getattr(CFG, "translate_to_english", False) and GoogleTranslator:
-        try:
-            return GoogleTranslator(source="auto", target="en").translate(text)
-        except Exception as e:
-            print("[dupdet] Translation failed:", e)
-    return text
-
-
 def embed_text_document(text: str) -> np.ndarray:
-    text = _maybe_translate(text)
+    """Embedding for posts (documents). Returns L2-normalized float32 vector."""
     emb = _get_embedder().get_text_embedding(text)
     return _l2(emb)
 
-
 def embed_text_query(text: str) -> np.ndarray:
-    text = _maybe_translate(text)
+    """Embedding for search queries. Returns L2-normalized float32 vector."""
     emb = _get_embedder().get_query_embedding(text)
     return _l2(emb)
 
-
-# --- Debug helpers ---
-def _cos(a, b) -> float:
-    return float(np.dot(a, b))
+def _cos(a: np.ndarray, b: np.ndarray) -> float:
+    return float(np.clip(np.dot(a, b), -1.0, 1.0))
 
 def self_similarity_doc(text: str) -> float:
+    """cos(embed_doc(text), embed_doc(text)) -> should be ~1.0"""
     v = embed_text_document(text)
     return _cos(v, v)
 
 def doc_vs_query_same_text(text: str) -> float:
-    return _cos(embed_text_document(text), embed_text_query(text))
+    """cos(embed_doc(text), embed_query(text)) -> should be ~1.0 for symmetric setup"""
+    vd = embed_text_document(text)
+    vq = embed_text_query(text)
+    return _cos(vd, vq)
+
