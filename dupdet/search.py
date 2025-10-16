@@ -32,6 +32,7 @@ def similar_posts_old(
     return out
 
 
+
 def similar_posts(
     query_text: str,
     top_k: Optional[int] = 10,
@@ -39,11 +40,13 @@ def similar_posts(
     topic: Optional[str] = None
 ) -> List[Tuple[str, float, float]]:
     """
-    Like similar_posts, but RETURNS (post_id, calibrated_score, raw_score).
-    Filtering is still done on raw_score >= min_score.
+    RETURNS (post_id, calibrated_score, raw_score).
     """
+    # Treat "" as None (match-all)
+    effective_topic = None if (topic is None or str(topic).strip() == "") else topic
+
     q = embed_text_query(query_text).astype(np.float32)
-    items = fetch_embeddings(topic=topic)
+    items = fetch_embeddings(topic=effective_topic)
     if not items:
         return []
 
