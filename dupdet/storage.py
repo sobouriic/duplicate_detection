@@ -118,3 +118,15 @@ def missing_embedding_posts(topic: Optional[str]) -> List[Tuple[str, str]]:
               WHERE p.topic = ? AND e.post_id IS NULL;
             """, (topic,))
         return cur.fetchall()
+def list_posts(topic: Optional[str] = None) -> List[Tuple[str, str]]:
+    """Return a list of (post_id, text) for all posts in the database.
+    If topic is None, return all posts."""
+    init_db()
+    with _conn() as con:
+        cur = con.cursor()
+        if topic is None:
+            cur.execute("SELECT post_id, text FROM posts;")
+        else:
+            cur.execute("SELECT post_id, text FROM posts WHERE topic = ?;", (topic,))
+        rows = cur.fetchall()
+    return rows

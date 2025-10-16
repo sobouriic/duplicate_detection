@@ -16,6 +16,10 @@ def _logistic(x: float, k: float, x0: float) -> float:
         return 0.0 if (k * (x - x0)) < 0 else 1.0
 
 def calibrate(raw: float) -> float:
+    # Special-case: identical vectors should always map to 1.0
+    if abs(raw - 1.0) < 1e-6:
+        return 1.0
+
     m = (CFG.calibration_method or "").lower()
     if m == "minmax":
         return _minmax(raw, CFG.cal_min_raw, CFG.cal_max_raw)

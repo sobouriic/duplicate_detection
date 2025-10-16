@@ -25,7 +25,7 @@ def _resolve_instructions(model_name: str):
 
     if "e5" in m:
         qi = qi or "query: "
-        ti = ti or "query: "
+        ti = ti or "passage: "
         return qi, ti
 
     return qi, ti
