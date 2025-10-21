@@ -134,40 +134,13 @@ for post_id, calibrated_score, raw_score in results:
 
 
 
-### 3. Run Pipeline Demo Script
-
-
-```bash
-
-
-python pipeline_test.py
-
-
-```
-
-
-This script demonstrates batch ingestion, embedding, and calibrated similarity search with multilingual data.
 
 
 
 
 
-### 4. Compare Embedding Models
 
-
-```bash
-
-
-python embedding_compare.py
-
-
-```
-
-
-
-
-
-### 5. Run Embedding Test
+### 3. Run Embedding Test
 
 
 ```bash
@@ -261,7 +234,6 @@ python embedding_test.py
 
 
 ```
-
 
 
 
